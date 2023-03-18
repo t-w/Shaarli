@@ -4,8 +4,6 @@ namespace Shaarli\Bookmark;
 
 use Shaarli\TestCase;
 
-require_once 'tests/utils/CurlUtils.php';
-
 /**
  * Class LinkUtilsTest.
  */
@@ -142,7 +140,7 @@ class LinkUtilsTest extends TestCase
         $this->assertEquals($description, html_extract_tag('description', $html));
 
         // OpenGraph multiple properties both end with noise
-        $html = '<meta tag1="content1" property="og:unrelated1 og:description og:unrelated2" '.
+        $html = '<meta tag1="content1" property="og:unrelated1 og:description og:unrelated2" ' .
             'tag2="content2" content="' . $description . '" tag3="content3">';
         $this->assertEquals($description, html_extract_tag('description', $html));
 
@@ -159,7 +157,7 @@ class LinkUtilsTest extends TestCase
         $this->assertEquals($description, html_extract_tag('description', $html));
 
         // OpenGraph reversed multiple properties both end with noise
-        $html = '<meta tag1="content1" content="' . $description . '" tag2="content2" '.
+        $html = '<meta tag1="content1" content="' . $description . '" tag2="content2" ' .
             'property="og:unrelated1 og:description og:unrelated2" tag3="content3">';
         $this->assertEquals($description, html_extract_tag('description', $html));
 
@@ -178,7 +176,7 @@ class LinkUtilsTest extends TestCase
         $html = '<meta property="og:description" content="' . $description . '">';
         $this->assertEquals($description, html_extract_tag('description', $html));
 
-        $html = '<meta tag1="content1" property="og:unrelated1 og:description og:unrelated2" '.
+        $html = '<meta tag1="content1" property="og:unrelated1 og:description og:unrelated2" ' .
             'tag2="content2" content="' . $description . '" tag3="content3">';
         $this->assertEquals($description, html_extract_tag('description', $html));
 
@@ -190,7 +188,7 @@ class LinkUtilsTest extends TestCase
         $html = '<meta property="og:description" content=\'' . $description . '\'>';
         $this->assertEquals($description, html_extract_tag('description', $html));
 
-        $html = '<meta tag1="content1" property="og:unrelated1 og:description og:unrelated2" '.
+        $html = '<meta tag1="content1" property="og:unrelated1 og:description og:unrelated2" ' .
             'tag2="content2" content=\'' . $description . '\' tag3="content3">';
         $this->assertEquals($description, html_extract_tag('description', $html));
 
@@ -243,6 +241,16 @@ class LinkUtilsTest extends TestCase
     {
         $html = '<html><meta>stuff2</meta><meta name="image" content="img"/></html>';
         $this->assertFalse(html_extract_tag('description', $html));
+    }
+
+    public function testHtmlExtractDescriptionFromGoogleRealCase(): void
+    {
+        $html = 'id="gsr"><meta content="Fêtes de fin d\'année" property="twitter:title"><meta ' .
+                'content="Bonnes fêtes de fin d\'année ! #GoogleDoodle" property="twitter:description">' .
+                '<meta content="Bonnes fêtes de fin d\'année ! #GoogleDoodle" property="og:description">' .
+                '<meta content="summary_large_image" property="twitter:card"><meta co'
+        ;
+        $this->assertSame('Bonnes fêtes de fin d\'année ! #GoogleDoodle', html_extract_tag('description', $html));
     }
 
     /**
@@ -645,6 +653,25 @@ class LinkUtilsTest extends TestCase
     }
 
     /**
+     * Test tags_str2array with / separator.
+     */
+    public function testTagsStr2ArrayWithRegexDelimiterSeparator(): void
+    {
+        $separator = '/';
+
+        static::assertSame(['tag1', 'tag2', 'tag3'], tags_str2array('tag1/tag2/tag3', $separator));
+        static::assertSame(['tag1', 'tag2', 'tag3'], tags_str2array('tag1////tag2////tag3', $separator));
+        static::assertSame(['tag1', 'tag2', 'tag3'], tags_str2array('///tag1///tag2////tag3//', $separator));
+        static::assertSame(
+            ['tag1#', 'tag2, and other', '.tag3'],
+            tags_str2array('///   tag1#     /// tag2, and other ////.tag3//', $separator)
+        );
+        static::assertSame([], tags_str2array('', $separator));
+        static::assertSame([], tags_str2array('   ', $separator));
+        static::assertSame([], tags_str2array(null, $separator));
+    }
+
+    /**
      * Test tags_array2str with ' ' separator.
      */
     public function testTagsArray2StrWithSpaceSeparator(): void
@@ -691,7 +718,10 @@ class LinkUtilsTest extends TestCase
         static::assertSame(['tag1', 'tag2', 'tag3'], tags_filter(['tag1', 'tag2', 'tag3'], $separator));
         static::assertSame(['tag1,', 'tag2@', 'tag3'], tags_filter(['tag1,', 'tag2@', 'tag3'], $separator));
         static::assertSame(['tag1', 'tag2', 'tag3'], tags_filter(['   tag1   ', 'tag2', 'tag3   '], $separator));
-        static::assertSame(['tag1', 'tag2', 'tag3'], tags_filter(['   tag1   ', ' ', 'tag2', '   ', 'tag3   '], $separator));
+        static::assertSame(
+            ['tag1', 'tag2', 'tag3'],
+            tags_filter(['   tag1   ', ' ', 'tag2', '   ', 'tag3   '], $separator)
+        );
         static::assertSame(['tag1'], tags_filter(['   tag1   '], $separator));
         static::assertSame([], tags_filter(['  '], $separator));
         static::assertSame([], tags_filter([], $separator));
@@ -711,7 +741,10 @@ class LinkUtilsTest extends TestCase
             ['tag1', 'tag2, and other', 'tag3'],
             tags_filter(['@@@@ tag1@@@', ' @tag2, and other @', 'tag3@@@@'], $separator)
         );
-        static::assertSame(['tag1', 'tag2', 'tag3'], tags_filter(['@@@tag1@@@', '@', 'tag2', '@@@', 'tag3@@@'], $separator));
+        static::assertSame(
+            ['tag1', 'tag2', 'tag3'],
+            tags_filter(['@@@tag1@@@', '@', 'tag2', '@@@', 'tag3@@@'], $separator)
+        );
         static::assertSame(['tag1'], tags_filter(['@@@@tag1@@@@'], $separator));
         static::assertSame([], tags_filter(['@@@'], $separator));
         static::assertSame([], tags_filter([], $separator));

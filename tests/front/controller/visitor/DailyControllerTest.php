@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Shaarli\Front\Controller\Visitor;
 
 use Shaarli\Bookmark\Bookmark;
+use Shaarli\Bookmark\SearchResult;
 use Shaarli\Feed\CachedPage;
 use Shaarli\TestCase;
 use Slim\Http\Request;
@@ -101,7 +102,7 @@ class DailyControllerTest extends TestCase
         static::assertSame(200, $result->getStatusCode());
         static::assertSame('daily', (string) $result->getBody());
         static::assertSame(
-            'Daily - '. format_date($currentDay, false, true) .' - Shaarli',
+            'Daily - ' . format_date($currentDay, false, true) . ' - Shaarli',
             $assignedVariables['pagetitle']
         );
         static::assertEquals($currentDay, $assignedVariables['dayDate']);
@@ -224,7 +225,7 @@ class DailyControllerTest extends TestCase
         static::assertSame(200, $result->getStatusCode());
         static::assertSame('daily', (string) $result->getBody());
         static::assertSame(
-            'Daily - '. format_date($currentDay, false, true) .' - Shaarli',
+            'Daily - ' . format_date($currentDay, false, true) . ' - Shaarli',
             $assignedVariables['pagetitle']
         );
         static::assertCount(1, $assignedVariables['linksToDisplay']);
@@ -284,7 +285,9 @@ class DailyControllerTest extends TestCase
         static::assertCount(7, $assignedVariables['linksToDisplay']);
 
         $columnIds = function (array $column): array {
-            return array_map(function (array $item): int { return $item['id']; }, $column);
+            return array_map(function (array $item): int {
+                return $item['id'];
+            }, $column);
         };
 
         static::assertSame([1, 4, 6], $columnIds($assignedVariables['cols'][0]));
@@ -347,13 +350,15 @@ class DailyControllerTest extends TestCase
         $request = $this->createMock(Request::class);
         $response = new Response();
 
-        $this->container->bookmarkService->expects(static::once())->method('search')->willReturn([
-            (new Bookmark())->setId(1)->setCreated($dates[0])->setUrl('http://domain.tld/1'),
-            (new Bookmark())->setId(2)->setCreated($dates[1])->setUrl('http://domain.tld/2'),
-            (new Bookmark())->setId(3)->setCreated($dates[1])->setUrl('http://domain.tld/3'),
-            (new Bookmark())->setId(4)->setCreated($dates[2])->setUrl('http://domain.tld/4'),
-            (new Bookmark())->setId(5)->setCreated($dates[3])->setUrl('http://domain.tld/5'),
-        ]);
+        $this->container->bookmarkService->expects(static::once())->method('search')->willReturn(
+            SearchResult::getSearchResult([
+                (new Bookmark())->setId(1)->setCreated($dates[0])->setUrl('http://domain.tld/1'),
+                (new Bookmark())->setId(2)->setCreated($dates[1])->setUrl('http://domain.tld/2'),
+                (new Bookmark())->setId(3)->setCreated($dates[1])->setUrl('http://domain.tld/3'),
+                (new Bookmark())->setId(4)->setCreated($dates[2])->setUrl('http://domain.tld/4'),
+                (new Bookmark())->setId(5)->setCreated($dates[3])->setUrl('http://domain.tld/5'),
+            ])
+        );
 
         $this->container->pageCacheManager
             ->expects(static::once())
@@ -363,8 +368,7 @@ class DailyControllerTest extends TestCase
                 $cachedPage->expects(static::once())->method('cache')->with('dailyrss');
 
                 return $cachedPage;
-            }
-        );
+            });
 
         // Save RainTPL assigned variables
         $assignedVariables = [];
@@ -387,7 +391,7 @@ class DailyControllerTest extends TestCase
         static::assertEquals($date, $day['date']);
         static::assertSame($date->format(\DateTime::RSS), $day['date_rss']);
         static::assertSame(format_date($date, false), $day['date_human']);
-        static::assertSame('http://shaarli/subfolder/daily?day='. $dates[0]->format('Ymd'), $day['absolute_url']);
+        static::assertSame('http://shaarli/subfolder/daily?day=' . $dates[0]->format('Ymd'), $day['absolute_url']);
         static::assertCount(1, $day['links']);
         static::assertSame(1, $day['links'][0]['id']);
         static::assertSame('http://domain.tld/1', $day['links'][0]['url']);
@@ -399,7 +403,7 @@ class DailyControllerTest extends TestCase
         static::assertEquals($date, $day['date']);
         static::assertSame($date->format(\DateTime::RSS), $day['date_rss']);
         static::assertSame(format_date($date, false), $day['date_human']);
-        static::assertSame('http://shaarli/subfolder/daily?day='. $dates[1]->format('Ymd'), $day['absolute_url']);
+        static::assertSame('http://shaarli/subfolder/daily?day=' . $dates[1]->format('Ymd'), $day['absolute_url']);
         static::assertCount(2, $day['links']);
 
         static::assertSame(2, $day['links'][0]['id']);
@@ -415,7 +419,7 @@ class DailyControllerTest extends TestCase
         static::assertEquals($date, $day['date']);
         static::assertSame($date->format(\DateTime::RSS), $day['date_rss']);
         static::assertSame(format_date($date, false), $day['date_human']);
-        static::assertSame('http://shaarli/subfolder/daily?day='. $dates[2]->format('Ymd'), $day['absolute_url']);
+        static::assertSame('http://shaarli/subfolder/daily?day=' . $dates[2]->format('Ymd'), $day['absolute_url']);
         static::assertCount(1, $day['links']);
         static::assertSame(4, $day['links'][0]['id']);
         static::assertSame('http://domain.tld/4', $day['links'][0]['url']);
@@ -454,7 +458,9 @@ class DailyControllerTest extends TestCase
         $request = $this->createMock(Request::class);
         $response = new Response();
 
-        $this->container->bookmarkService->expects(static::once())->method('search')->willReturn([]);
+        $this->container->bookmarkService
+            ->expects(static::once())->method('search')
+            ->willReturn(SearchResult::getSearchResult([]));
 
         // Save RainTPL assigned variables
         $assignedVariables = [];
@@ -613,11 +619,13 @@ class DailyControllerTest extends TestCase
         });
         $response = new Response();
 
-        $this->container->bookmarkService->expects(static::once())->method('search')->willReturn([
-            (new Bookmark())->setId(1)->setCreated($dates[0])->setUrl('http://domain.tld/1'),
-            (new Bookmark())->setId(2)->setCreated($dates[1])->setUrl('http://domain.tld/2'),
-            (new Bookmark())->setId(3)->setCreated($dates[1])->setUrl('http://domain.tld/3'),
-        ]);
+        $this->container->bookmarkService->expects(static::once())->method('search')->willReturn(
+            SearchResult::getSearchResult([
+                (new Bookmark())->setId(1)->setCreated($dates[0])->setUrl('http://domain.tld/1'),
+                (new Bookmark())->setId(2)->setCreated($dates[1])->setUrl('http://domain.tld/2'),
+                (new Bookmark())->setId(3)->setCreated($dates[1])->setUrl('http://domain.tld/3'),
+            ])
+        );
 
         // Save RainTPL assigned variables
         $assignedVariables = [];
@@ -640,7 +648,7 @@ class DailyControllerTest extends TestCase
         static::assertEquals($date, $day['date']);
         static::assertSame($date->format(\DateTime::RSS), $day['date_rss']);
         static::assertSame('Week 21 (May 18, 2020)', $day['date_human']);
-        static::assertSame('http://shaarli/subfolder/daily?week='. $dates[0]->format('YW'), $day['absolute_url']);
+        static::assertSame('http://shaarli/subfolder/daily?week=' . $dates[0]->format('YW'), $day['absolute_url']);
         static::assertCount(1, $day['links']);
 
         $day = $assignedVariables['days'][$dates[1]->format('YW')];
@@ -649,7 +657,7 @@ class DailyControllerTest extends TestCase
         static::assertEquals($date, $day['date']);
         static::assertSame($date->format(\DateTime::RSS), $day['date_rss']);
         static::assertSame('Week 20 (May 11, 2020)', $day['date_human']);
-        static::assertSame('http://shaarli/subfolder/daily?week='. $dates[1]->format('YW'), $day['absolute_url']);
+        static::assertSame('http://shaarli/subfolder/daily?week=' . $dates[1]->format('YW'), $day['absolute_url']);
         static::assertCount(2, $day['links']);
     }
 
@@ -659,11 +667,11 @@ class DailyControllerTest extends TestCase
     public function testSimpleRssMonthly(): void
     {
         $dates = [
-            new \DateTimeImmutable('2020-05-19'),
+            new \DateTimeImmutable('2022-02-19'),
             new \DateTimeImmutable('2020-04-13'),
         ];
         $expectedDates = [
-            new \DateTimeImmutable('2020-05-31 23:59:59'),
+            new \DateTimeImmutable('2022-02-28 23:59:59'),
             new \DateTimeImmutable('2020-04-30 23:59:59'),
         ];
 
@@ -674,11 +682,13 @@ class DailyControllerTest extends TestCase
         });
         $response = new Response();
 
-        $this->container->bookmarkService->expects(static::once())->method('search')->willReturn([
-            (new Bookmark())->setId(1)->setCreated($dates[0])->setUrl('http://domain.tld/1'),
-            (new Bookmark())->setId(2)->setCreated($dates[1])->setUrl('http://domain.tld/2'),
-            (new Bookmark())->setId(3)->setCreated($dates[1])->setUrl('http://domain.tld/3'),
-        ]);
+        $this->container->bookmarkService->expects(static::once())->method('search')->willReturn(
+            SearchResult::getSearchResult([
+                (new Bookmark())->setId(1)->setCreated($dates[0])->setUrl('http://domain.tld/1'),
+                (new Bookmark())->setId(2)->setCreated($dates[1])->setUrl('http://domain.tld/2'),
+                (new Bookmark())->setId(3)->setCreated($dates[1])->setUrl('http://domain.tld/3'),
+            ])
+        );
 
         // Save RainTPL assigned variables
         $assignedVariables = [];
@@ -700,8 +710,8 @@ class DailyControllerTest extends TestCase
 
         static::assertEquals($date, $day['date']);
         static::assertSame($date->format(\DateTime::RSS), $day['date_rss']);
-        static::assertSame('May, 2020', $day['date_human']);
-        static::assertSame('http://shaarli/subfolder/daily?month='. $dates[0]->format('Ym'), $day['absolute_url']);
+        static::assertSame('February, 2022', $day['date_human']);
+        static::assertSame('http://shaarli/subfolder/daily?month=' . $dates[0]->format('Ym'), $day['absolute_url']);
         static::assertCount(1, $day['links']);
 
         $day = $assignedVariables['days'][$dates[1]->format('Ym')];
@@ -710,7 +720,7 @@ class DailyControllerTest extends TestCase
         static::assertEquals($date, $day['date']);
         static::assertSame($date->format(\DateTime::RSS), $day['date_rss']);
         static::assertSame('April, 2020', $day['date_human']);
-        static::assertSame('http://shaarli/subfolder/daily?month='. $dates[1]->format('Ym'), $day['absolute_url']);
+        static::assertSame('http://shaarli/subfolder/daily?month=' . $dates[1]->format('Ym'), $day['absolute_url']);
         static::assertCount(2, $day['links']);
     }
 }

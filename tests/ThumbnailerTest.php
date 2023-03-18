@@ -15,9 +15,9 @@ use WebThumbnailer\Application\ConfigManager as WTConfigManager;
  */
 class ThumbnailerTest extends TestCase
 {
-    const WIDTH = 190;
+    protected const WIDTH = 190;
 
-    const HEIGHT = 210;
+    protected const HEIGHT = 210;
 
     /**
      * @var Thumbnailer;
@@ -52,7 +52,7 @@ class ThumbnailerTest extends TestCase
      */
     public function testThumbnailAllValid()
     {
-        $thumb = $this->thumbnailer->get('https://github.com/shaarli/Shaarli/');
+        $thumb = $this->thumbnailer->get('https://gitlab.com/shaarli/Shaarli');
         $this->assertNotFalse($thumb);
         $image = imagecreatefromstring(file_get_contents($thumb));
         $this->assertEquals(self::WIDTH, imagesx($image));
@@ -103,10 +103,10 @@ class ThumbnailerTest extends TestCase
             $objects = scandir($dir);
             foreach ($objects as $object) {
                 if ($object != "." && $object != "..") {
-                    if (is_dir($dir."/".$object)) {
-                        $this->rrmdirContent($dir."/".$object);
+                    if (is_dir($dir . "/" . $object)) {
+                        $this->rrmdirContent($dir . "/" . $object);
                     } else {
-                        unlink($dir."/".$object);
+                        unlink($dir . "/" . $object);
                     }
                 }
             }

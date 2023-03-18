@@ -27,7 +27,7 @@ class BookmarkDefaultFormatterTest extends TestCase
      */
     protected function setUp(): void
     {
-        copy('tests/utils/config/configJson.json.php', self::$testConf .'.json.php');
+        copy('tests/utils/config/configJson.json.php', self::$testConf . '.json.php');
         $this->conf = new ConfigManager(self::$testConf);
         $this->formatter = new BookmarkDefaultFormatter($this->conf, true);
     }
@@ -112,9 +112,9 @@ class BookmarkDefaultFormatterTest extends TestCase
     {
         $description = [];
         $description[] = 'This a <strong>description</strong>' . PHP_EOL;
-        $description[] = 'text https://sub.domain.tld?query=here&for=real#hash more text'. PHP_EOL;
-        $description[] = 'Also, there is an #hashtag added'. PHP_EOL;
-        $description[] = '    A  N  D KEEP     SPACES    !   '. PHP_EOL;
+        $description[] = 'text https://sub.domain.tld?query=here&for=real#hash more text' . PHP_EOL;
+        $description[] = 'Also, there is an #hashtag added' . PHP_EOL;
+        $description[] = '    A  N  D KEEP     SPACES    !   ' . PHP_EOL;
 
         $bookmark = new Bookmark();
         $bookmark->setDescription(implode('', $description));
@@ -122,10 +122,10 @@ class BookmarkDefaultFormatterTest extends TestCase
 
         $description[0] = 'This a &lt;strong&gt;description&lt;/strong&gt;<br />';
         $url = 'https://sub.domain.tld?query=here&amp;for=real#hash';
-        $description[1] = 'text <a href="'. $url .'">'. $url .'</a> more text<br />';
-        $description[2] = 'Also, there is an <a href="./add-tag/hashtag" '.
+        $description[1] = 'text <a href="' . $url . '">' . $url . '</a> more text<br />';
+        $description[2] = 'Also, there is an <a href="./add-tag/hashtag" ' .
             'title="Hashtag hashtag">#hashtag</a> added<br />';
-        $description[3] = '&nbsp; &nbsp; A &nbsp;N &nbsp;D KEEP &nbsp; &nbsp; '.
+        $description[3] = '&nbsp; &nbsp; A &nbsp;N &nbsp;D KEEP &nbsp; &nbsp; ' .
             'SPACES &nbsp; &nbsp;! &nbsp; <br />';
 
         $this->assertEquals(implode(PHP_EOL, $description) . PHP_EOL, $link['description']);
@@ -148,7 +148,7 @@ class BookmarkDefaultFormatterTest extends TestCase
         $this->assertEquals($root . $short, $link['url']);
         $this->assertEquals($root . $short, $link['real_url']);
         $this->assertEquals(
-            'Text <a href="'. $root .'./add-tag/hashtag" title="Hashtag hashtag">'.
+            'Text <a href="' . $root . './add-tag/hashtag" title="Hashtag hashtag">' .
             '#hashtag</a> more text',
             $link['description']
         );
@@ -184,7 +184,7 @@ class BookmarkDefaultFormatterTest extends TestCase
 
         $bookmark = new Bookmark();
         $bookmark->setTitle('PSR-2: Coding Style Guide');
-        $bookmark->addAdditionalContentEntry(
+        $bookmark->setAdditionalContentEntry(
             'search_highlight',
             ['title' => [
                 ['start' => 0, 'end' => 5], // "psr-2"
@@ -211,13 +211,17 @@ class BookmarkDefaultFormatterTest extends TestCase
         $this->formatter = new BookmarkDefaultFormatter($this->conf, false);
 
         $bookmark = new Bookmark();
-        $bookmark->setDescription('This guide extends and expands on PSR-1, the basic coding standard.');
-        $bookmark->addAdditionalContentEntry(
+        $bookmark->setDescription(
+            'This guide extends and expands on PSR-1, the basic coding standard.' . PHP_EOL .
+            'https://www.php-fig.org/psr/psr-1/'
+        );
+        $bookmark->setAdditionalContentEntry(
             'search_highlight',
             ['description' => [
                 ['start' => 0, 'end' => 10], // "This guide"
                 ['start' => 45, 'end' => 50], // basic
                 ['start' => 58, 'end' => 67], // standard.
+                ['start' => 84, 'end' => 87], // fig
             ]]
         );
 
@@ -226,7 +230,10 @@ class BookmarkDefaultFormatterTest extends TestCase
         $this->assertSame(
             '<span class="search-highlight">This guide</span> extends and expands on PSR-1, the ' .
             '<span class="search-highlight">basic</span> coding ' .
-            '<span class="search-highlight">standard.</span>',
+            '<span class="search-highlight">standard.</span><br />' . PHP_EOL .
+            '<a href="https://www.php-fig.org/psr/psr-1/">' .
+                'https://www.php-<span class="search-highlight">fig</span>.org/psr/psr-1/' .
+            '</a>',
             $link['description']
         );
     }
@@ -240,7 +247,7 @@ class BookmarkDefaultFormatterTest extends TestCase
 
         $bookmark = new Bookmark();
         $bookmark->setUrl('http://www.php-fig.org/psr/psr-2/');
-        $bookmark->addAdditionalContentEntry(
+        $bookmark->setAdditionalContentEntry(
             'search_highlight',
             ['url' => [
                 ['start' => 0, 'end' => 4], // http
@@ -268,7 +275,7 @@ class BookmarkDefaultFormatterTest extends TestCase
 
         $bookmark = new Bookmark();
         $bookmark->setTagsString('coding-style standards quality assurance');
-        $bookmark->addAdditionalContentEntry(
+        $bookmark->setAdditionalContentEntry(
             'search_highlight',
             ['tags' => [
                 ['start' => 0, 'end' => 12], // coding-style

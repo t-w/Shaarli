@@ -62,8 +62,6 @@ Some settings can be configured directly from a web browser by accesing the `Too
         "rss_permalinks": true,
         "links_per_page": 20,
         "default_private_links": true,
-        "enable_thumbnails": true,
-        "enable_localcache": true,
         "check_updates_branch": "stable",
         "check_updates_interval": 86400,
         "enabled_plugins": [
@@ -85,16 +83,7 @@ Some settings can be configured directly from a web browser by accesing the `Too
         "hide_timestamps": false,
         "open_shaarli": false,
     },
-    "general": {
-        "header_link": "?",
-        "links_per_page": 20,
-        "enabled_plugins": [
-            "markdown",
-            "wallabag"
-        ],
-        "timezone": "Europe\/Paris",
-        "title": "My Shaarli"
-    },
+    "formatter": "markdown",
     "updates": {
         "check_updates": true,
         "check_updates_branch": "stable",
@@ -111,9 +100,10 @@ Some settings can be configured directly from a web browser by accesing the `Too
         "hide_timestamps": false,
         "remember_user_default": true
     },
-    "thumbnail": {
-        "enable_thumbnails": true,
-        "enable_localcache": true
+    "thumbnails": {
+        "width": 125,
+        "height": 90,
+        "mode": "common"
     },
     "plugins": {
         "WALLABAG_URL": "http://demo.wallabag.org",
@@ -164,7 +154,7 @@ _These settings should not be edited_
 - **ban_duration**: IP ban duration in seconds.
 - **open_shaarli**: Anyone can add a new Shaare while logged out if enabled.
 - **trusted_proxies**: List of trusted IP which won't be banned after failed login attemps. Useful if Shaarli is behind a reverse proxy.
-- **allowed_protocols**: List of allowed protocols in shaare URLs or markdown-rendered descriptions. Useful if you want to store `javascript:` links (bookmarklets) in Shaarli (default: `["ftp", "ftps", "magnet"]`).
+- **allowed_protocols**: List of allowed protocols in shaare URLs or markdown-rendered descriptions. Useful if you want to store `javascript:` links (bookmarklets) or `file:///` URIs in Shaarli (default: `["ftp", "ftps", "magnet"]`).
 
 ### Formatter
 
@@ -230,10 +220,11 @@ Must be an associative array: `translation domain => translation path`.
 - **rss_permalinks**: Enable this to redirect RSS links to Shaarli's permalinks instead of shaared URL.
 - **show_atom**: Display ATOM feed button.
 
-### Thumbnail
+### Thumbnails
 
-- **enable_thumbnails**: Enable or disable thumbnail display.
-- **enable_localcache**: Enable or disable local cache.
+- **width:** width of generated thumbnails, in pixels
+- **height:** height of generated thumbnails, in pixels
+- **mode:** enable thumbnails for `all` shaares, or `common` media hosts, or `none`.
 
 ## Plugins configuration
 

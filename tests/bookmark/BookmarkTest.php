@@ -167,7 +167,7 @@ class BookmarkTest extends TestCase
             $exception = $e;
         }
         $this->assertNotNull($exception);
-        $this->assertContainsPolyfill('- ID: '. PHP_EOL, $exception->getMessage());
+        $this->assertContainsPolyfill('- ID: ' . PHP_EOL, $exception->getMessage());
     }
 
     /**
@@ -186,7 +186,7 @@ class BookmarkTest extends TestCase
             $exception = $e;
         }
         $this->assertNotNull($exception);
-        $this->assertContainsPolyfill('- ShortUrl: '. PHP_EOL, $exception->getMessage());
+        $this->assertContainsPolyfill('- ShortUrl: ' . PHP_EOL, $exception->getMessage());
     }
 
     /**
@@ -205,7 +205,7 @@ class BookmarkTest extends TestCase
             $exception = $e;
         }
         $this->assertNotNull($exception);
-        $this->assertContainsPolyfill('- Created: '. PHP_EOL, $exception->getMessage());
+        $this->assertContainsPolyfill('- Created: ' . PHP_EOL, $exception->getMessage());
     }
 
     /**
@@ -260,6 +260,63 @@ class BookmarkTest extends TestCase
 
         $bookmark->setUrl($url = 'https://helloworld.tld', []);
         $this->assertEquals($url, $bookmark->getUrl());
+    }
+
+    /**
+     * Test addTag() and DeleteTag()
+     */
+
+    public function testAddDeleteTags()
+    {
+        $bookmark = new Bookmark();
+
+        $bookmark->addTag('tag1');
+        $this->assertEquals(
+            [
+                'tag1',
+            ],
+            $bookmark->getTags()
+        );
+
+        // Ignore if tag is already present
+        $bookmark->addTag('tag2');
+        $bookmark->addTag('tag1');
+        $this->assertEquals(
+            [
+                'tag1',
+                'tag2',
+            ],
+            $bookmark->getTags()
+        );
+
+        // Ignore deleting tags not present
+        $bookmark->deleteTag('tag5');
+        $this->assertEquals(
+            [
+                'tag1',
+                'tag2',
+            ],
+            $bookmark->getTags()
+        );
+
+        // Delete multiples
+        $bookmark->setTags(['tag3', 'tag1', 'tag4', 'tag3', 'tag3', 'tag4']);
+        $bookmark->deleteTag('tag3');
+        $this->assertEquals(
+            [
+                'tag1',
+                'tag4',
+                'tag4',
+            ],
+            $bookmark->getTags()
+        );
+        $bookmark->deleteTag('tag4');
+        $this->assertEquals(
+            [
+                'tag1',
+            ],
+            $bookmark->getTags()
+        );
     }
 
     /**

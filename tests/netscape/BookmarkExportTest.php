@@ -8,9 +8,9 @@ use Shaarli\Config\ConfigManager;
 use Shaarli\Formatter\BookmarkFormatter;
 use Shaarli\Formatter\FormatterFactory;
 use Shaarli\History;
+use Shaarli\Plugin\PluginManager;
 use Shaarli\TestCase;
-
-require_once 'tests/utils/ReferenceLinkDB.php';
+use Shaarli\Tests\Utils\ReferenceLinkDB;
 
 /**
  * Netscape bookmark export
@@ -28,7 +28,7 @@ class BookmarkExportTest extends TestCase
     protected static $conf;
 
     /**
-     * @var \ReferenceLinkDB instance.
+     * @var ReferenceLinkDB instance.
      */
     protected static $refDb = null;
 
@@ -47,6 +47,9 @@ class BookmarkExportTest extends TestCase
      */
     protected static $history;
 
+    /** @var PluginManager */
+    protected static $pluginManager;
+
     /**
      * @var NetscapeBookmarkUtils
      */
@@ -60,10 +63,17 @@ class BookmarkExportTest extends TestCase
         $mutex = new NoMutex();
         static::$conf = new ConfigManager('tests/utils/config/configJson');
         static::$conf->set('resource.datastore', static::$testDatastore);
-        static::$refDb = new \ReferenceLinkDB();
+        static::$refDb = new ReferenceLinkDB();
         static::$refDb->write(static::$testDatastore);
         static::$history = new History('sandbox/history.php');
-        static::$bookmarkService = new BookmarkFileService(static::$conf, static::$history, $mutex, true);
+        static::$pluginManager = new PluginManager(static::$conf);
+        static::$bookmarkService = new BookmarkFileService(
+            static::$conf,
+            static::$pluginManager,
+            static::$history,
+            $mutex,
+            true
+        );
         $factory = new FormatterFactory(static::$conf, true);
         static::$formatter = $factory->getFormatter('raw');
     }

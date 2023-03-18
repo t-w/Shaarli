@@ -32,7 +32,7 @@ class ShaarliVisitorControllerTest extends TestCase
     {
         $this->createContainer();
 
-        $this->controller = new class($this->container) extends ShaarliVisitorController
+        $this->controller = new class ($this->container) extends ShaarliVisitorController
         {
             public function assignView(string $key, $value): ShaarliVisitorController
             {
@@ -92,6 +92,9 @@ class ShaarliVisitorControllerTest extends TestCase
         $render = $this->controller->render('templateName');
 
         static::assertSame('templateName', $render);
+
+        static::assertSame('templateName', $this->assignedValues['_PAGE_']);
+        static::assertSame('templateName', $this->assignedValues['template']);
 
         static::assertSame(10, $this->assignedValues['linkcount']);
         static::assertSame(5, $this->assignedValues['privateLinkcount']);

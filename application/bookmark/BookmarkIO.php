@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Shaarli\Bookmark;
 
+use malkusch\lock\exception\LockAcquireException;
 use malkusch\lock\mutex\Mutex;
 use malkusch\lock\mutex\NoMutex;
 use Shaarli\Bookmark\Exception\DatastoreNotInitializedException;
 use Shaarli\Bookmark\Exception\EmptyDataStoreException;
+use Shaarli\Bookmark\Exception\InvalidWritableDataException;
+use Shaarli\Bookmark\Exception\NotEnoughSpaceException;
 use Shaarli\Bookmark\Exception\NotWritableDataStoreException;
 use Shaarli\Config\ConfigManager;
 
@@ -80,7 +83,7 @@ class BookmarkIO
         }
 
         $content = null;
-        $this->mutex->synchronized(function () use (&$content) {
+        $this->synchronized(function () use (&$content) {
             $content = file_get_contents($this->datastore);
         });
 
@@ -106,6 +109,7 @@ class BookmarkIO
      * @param Bookmark[] $links
      *
      * @throws NotWritableDataStoreException the datastore is not writable
+     * @throws InvalidWritableDataException
      */
     public function write($links)
     {
@@ -117,13 +121,53 @@ class BookmarkIO
             throw new NotWritableDataStoreException(dirname($this->datastore));
         }
 
-        $data = self::$phpPrefix . base64_encode(gzdeflate(serialize($links))) . self::$phpSuffix;
+        $data = base64_encode(gzdeflate(serialize($links)));
 
-        $this->mutex->synchronized(function () use ($data) {
+        if (empty($data)) {
+            throw new InvalidWritableDataException();
+        }
+
+        $data = self::$phpPrefix . $data . self::$phpSuffix;
+
+        $this->synchronized(function () use ($data) {
+            if (!$this->checkDiskSpace($data)) {
+                throw new NotEnoughSpaceException();
+            }
+
             file_put_contents(
                 $this->datastore,
                 $data
             );
         });
+    }
+
+    /**
+     * Wrapper applying mutex to provided function.
+     * If the lock can't be acquired (e.g. some shared hosting provider), we execute the function without mutex.
+     *
+     * @see https://github.com/shaarli/Shaarli/issues/1650
+     *
+     * @param callable $function
+     */
+    protected function synchronized(callable $function): void
+    {
+        try {
+            $this->mutex->synchronized($function);
+        } catch (LockAcquireException $exception) {
+            $function();
+        }
+    }
+
+    /**
+     * Make sure that there is enough disk space available to save the current data store.
+     * We add an arbitrary margin of 500kB.
+     *
+     * @param string $data to be saved
+     *
+     * @return bool True if data can safely be saved
+     */
+    public function checkDiskSpace(string $data): bool
+    {
+        return disk_free_space(dirname($this->datastore)) > (strlen($data) + 1024 * 500);
     }
 }

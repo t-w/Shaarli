@@ -3,10 +3,12 @@
 namespace Shaarli\Bookmark;
 
 use malkusch\lock\mutex\NoMutex;
-use ReferenceLinkDB;
 use Shaarli\Config\ConfigManager;
 use Shaarli\History;
+use Shaarli\Plugin\PluginManager;
 use Shaarli\TestCase;
+use Shaarli\Tests\Utils\FakeBookmarkService;
+use Shaarli\Tests\Utils\ReferenceLinkDB;
 
 /**
  * Class BookmarkFilterTest.
@@ -32,19 +34,24 @@ class BookmarkFilterTest extends TestCase
      */
     protected static $bookmarkService;
 
+    /** @var PluginManager */
+    protected static $pluginManager;
+
     /**
      * Instantiate linkFilter with ReferenceLinkDB data.
      */
     public static function setUpBeforeClass(): void
     {
+
         $mutex = new NoMutex();
         $conf = new ConfigManager('tests/utils/config/configJson');
         $conf->set('resource.datastore', self::$testDatastore);
-        self::$refDB = new \ReferenceLinkDB();
+        static::$pluginManager = new PluginManager($conf);
+        self::$refDB = new ReferenceLinkDB();
         self::$refDB->write(self::$testDatastore);
         $history = new History('sandbox/history.php');
-        self::$bookmarkService = new \FakeBookmarkService($conf, $history, $mutex, true);
-        self::$linkFilter = new BookmarkFilter(self::$bookmarkService->getBookmarks(), $conf);
+        self::$bookmarkService = new FakeBookmarkService($conf, static::$pluginManager, $history, $mutex, true);
+        self::$linkFilter = new BookmarkFilter(self::$bookmarkService->getBookmarks(), $conf, static::$pluginManager);
     }
 
     /**
@@ -119,6 +126,11 @@ class BookmarkFilterTest extends TestCase
 
         $this->assertEquals(
             4,
+            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, '+web', false))
+        );
+
+        $this->assertEquals(
+            4,
             count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, 'web', false, 'all'))
         );
 
@@ -176,61 +188,6 @@ class BookmarkFilterTest extends TestCase
             0,
             count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, 'null', false))
         );
-    }
-
-    /**
-     * Return bookmarks for a given day
-     */
-    public function testFilterDay()
-    {
-        $this->assertEquals(
-            4,
-            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_DAY, '20121206'))
-        );
-    }
-
-    /**
-     * Return bookmarks for a given day
-     */
-    public function testFilterDayRestrictedVisibility(): void
-    {
-        $this->assertEquals(
-            3,
-            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_DAY, '20121206', false, BookmarkFilter::$PUBLIC))
-        );
-    }
-
-    /**
-     * 404 - day not found
-     */
-    public function testFilterUnknownDay()
-    {
-        $this->assertEquals(
-            0,
-            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_DAY, '19700101'))
-        );
-    }
-
-    /**
-     * Use an invalid date format
-     */
-    public function testFilterInvalidDayWithChars()
-    {
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessageRegExp('/Invalid date format/');
-
-        self::$linkFilter->filter(BookmarkFilter::$FILTER_DAY, 'Rainy day, dream away');
-    }
-
-    /**
-     * Use an invalid date format
-     */
-    public function testFilterInvalidDayDigits()
-    {
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessageRegExp('/Invalid date format/');
-
-        self::$linkFilter->filter(BookmarkFilter::$FILTER_DAY, '20');
     }
 
     /**
@@ -466,28 +423,28 @@ class BookmarkFilterTest extends TestCase
             1,
             count(self::$linkFilter->filter(
                 BookmarkFilter::$FILTER_TAG | BookmarkFilter::$FILTER_TEXT,
-                array($tags, $terms)
+                [$tags, $terms]
             ))
         );
         $this->assertEquals(
             2,
             count(self::$linkFilter->filter(
                 BookmarkFilter::$FILTER_TAG | BookmarkFilter::$FILTER_TEXT,
-                array('', $terms)
+                ['', $terms]
             ))
         );
         $this->assertEquals(
             1,
             count(self::$linkFilter->filter(
                 BookmarkFilter::$FILTER_TAG | BookmarkFilter::$FILTER_TEXT,
-                array(false, 'PSR-2')
+                [false, 'PSR-2']
             ))
         );
         $this->assertEquals(
             1,
             count(self::$linkFilter->filter(
                 BookmarkFilter::$FILTER_TAG | BookmarkFilter::$FILTER_TEXT,
-                array($tags, '')
+                [$tags, '']
             ))
         );
         $this->assertEquals(
@@ -496,6 +453,37 @@ class BookmarkFilterTest extends TestCase
                 BookmarkFilter::$FILTER_TAG | BookmarkFilter::$FILTER_TEXT,
                 ''
             ))
+        );
+    }
+
+    /**
+     * Tag search with OR optional tags.
+     */
+    public function testTagFilterOr()
+    {
+        $this->assertEquals(
+            5,
+            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, '~cartoon ~web'))
+        );
+
+        $this->assertEquals(
+            6,
+            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, '~c*t*n ~st*'))
+        );
+
+        $this->assertEquals(
+            2,
+            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, '~cartoon ~web dev'))
+        );
+
+        $this->assertEquals(
+            2,
+            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, '~cartoon ~web +dev'))
+        );
+
+        $this->assertEquals(
+            4,
+            count(self::$linkFilter->filter(BookmarkFilter::$FILTER_TAG, '~cartoon ~web -samba'))
         );
     }
 

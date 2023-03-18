@@ -7,6 +7,8 @@ use Shaarli\Bookmark\BookmarkFileService;
 use Shaarli\Bookmark\LinkDB;
 use Shaarli\Config\ConfigManager;
 use Shaarli\History;
+use Shaarli\Plugin\PluginManager;
+use Shaarli\Tests\Utils\ReferenceLinkDB;
 use Slim\Container;
 use Slim\Http\Environment;
 use Slim\Http\Request;
@@ -32,7 +34,7 @@ class GetTagNameTest extends \Shaarli\TestCase
     protected $conf;
 
     /**
-     * @var \ReferenceLinkDB instance.
+     * @var ReferenceLinkDB instance.
      */
     protected $refDB = null;
 
@@ -46,10 +48,13 @@ class GetTagNameTest extends \Shaarli\TestCase
      */
     protected $controller;
 
+    /** @var PluginManager */
+    protected $pluginManager;
+
     /**
      * Number of JSON fields per link.
      */
-    const NB_FIELDS_TAG = 2;
+    protected const NB_FIELDS_TAG = 2;
 
     /**
      * Before each test, instantiate a new Api with its config, plugins and bookmarks.
@@ -59,13 +64,20 @@ class GetTagNameTest extends \Shaarli\TestCase
         $mutex = new NoMutex();
         $this->conf = new ConfigManager('tests/utils/config/configJson');
         $this->conf->set('resource.datastore', self::$testDatastore);
-        $this->refDB = new \ReferenceLinkDB();
+        $this->refDB = new ReferenceLinkDB();
         $this->refDB->write(self::$testDatastore);
         $history = new History('sandbox/history.php');
 
         $this->container = new Container();
         $this->container['conf'] = $this->conf;
-        $this->container['db'] = new BookmarkFileService($this->conf, $history, $mutex, true);
+        $this->pluginManager = new PluginManager($this->conf);
+        $this->container['db'] = new BookmarkFileService(
+            $this->conf,
+            $this->pluginManager,
+            $history,
+            $mutex,
+            true
+        );
         $this->container['history'] = null;
 
         $this->controller = new Tags($this->container);

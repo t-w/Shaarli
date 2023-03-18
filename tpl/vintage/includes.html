@@ -16,11 +16,11 @@
 {if="is_file('data/user.css')"}<link type="text/css" rel="stylesheet" href="{$base_path}/data/user.css#" />{/if}
 <link rel="search" type="application/opensearchdescription+xml" href="{$base_path}/open-search#"
       title="Shaarli search - {$shaarlititle|htmlspecialchars}" />
-{if="! empty($links) && count($links) === 1"}
+{if="$template === 'linklist' && ! empty($links) && count($links) === 1"}
   {$link=reset($links)}
   <meta property="og:title" content="{$link.title}" />
   <meta property="og:type" content="article" />
-  <meta property="og:url" content="{$index_url}?{$link.shorturl}" />
+  <meta property="og:url" content="{$index_url}shaare/{$link.shorturl}" />
   {$ogDescription=isset($link.description_src) ? $link.description_src : $link.description}
   <meta property="og:description" content="{function="mb_substr(strip_tags($ogDescription), 0, 300)"}" />
   {if="!empty($link.thumbnail)"}

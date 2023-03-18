@@ -31,6 +31,7 @@ use Psr\Log\LogLevel;
 use Shaarli\Config\ConfigManager;
 use Shaarli\Container\ContainerBuilder;
 use Shaarli\Languages;
+use Shaarli\Plugin\PluginManager;
 use Shaarli\Security\BanManager;
 use Shaarli\Security\CookieManager;
 use Shaarli\Security\LoginManager;
@@ -47,13 +48,18 @@ if ($conf->get('dev.debug', false)) {
     // See all errors (for debugging only)
     error_reporting(-1);
 
-    set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errcontext) {
+    set_error_handler(function ($errno, $errstr, $errfile, $errline, array $errcontext = []) {
+        // Skip PHP 8 deprecation warning with Pimple.
+        if (strpos($errfile, 'src/Pimple/Container.php') !== -1 && strpos($errstr, 'ArrayAccess::') !== -1) {
+            return error_log($errstr);
+        }
+
         throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
     });
 }
 
 $logger = new Logger(
-    dirname($conf->get('resource.log')),
+    is_writable($conf->get('resource.log')) ? dirname($conf->get('resource.log')) : 'php://temp',
     !$conf->get('dev.debug') ? LogLevel::INFO : LogLevel::DEBUG,
     ['filename' => basename($conf->get('resource.log'))]
 );
@@ -87,7 +93,17 @@ date_default_timezone_set($conf->get('general.timezone', 'UTC'));
 
 $loginManager->checkLoginState(client_ip_id($_SERVER));
 
-$containerBuilder = new ContainerBuilder($conf, $sessionManager, $cookieManager, $loginManager, $logger);
+$pluginManager = new PluginManager($conf);
+$pluginManager->load($conf->get('general.enabled_plugins', []));
+
+$containerBuilder = new ContainerBuilder(
+    $conf,
+    $sessionManager,
+    $cookieManager,
+    $loginManager,
+    $pluginManager,
+    $logger
+);
 $container = $containerBuilder->build();
 $app = new App($container);
 
@@ -135,6 +151,7 @@ $app->group('/admin', function () {
     $this->post('/shaare', '\Shaarli\Front\Controller\Admin\ShaarePublishController:save');
     $this->get('/shaare/delete', '\Shaarli\Front\Controller\Admin\ShaareManageController:deleteBookmark');
     $this->get('/shaare/visibility', '\Shaarli\Front\Controller\Admin\ShaareManageController:changeVisibility');
+    $this->post('/shaare/update-tags', '\Shaarli\Front\Controller\Admin\ShaareManageController:addOrDeleteTags');
     $this->get('/shaare/{id:[0-9]+}/pin', '\Shaarli\Front\Controller\Admin\ShaareManageController:pinBookmark');
     $this->patch(
         '/shaare/{id:[0-9]+}/update-thumbnail',
@@ -154,6 +171,15 @@ $app->group('/admin', function () {
     $this->get('/visibility/{visibility}', '\Shaarli\Front\Controller\Admin\SessionFilterController:visibility');
 })->add('\Shaarli\Front\ShaarliAdminMiddleware');
 
+$app->group('/plugin', function () use ($pluginManager) {
+    foreach ($pluginManager->getRegisteredRoutes() as $pluginName => $routes) {
+        $this->group('/' . $pluginName, function () use ($routes) {
+            foreach ($routes as $route) {
+                $this->{strtolower($route['method'])}('/' . ltrim($route['route'], '/'), $route['callable']);
+            }
+        });
+    }
+})->add('\Shaarli\Front\ShaarliMiddleware');
 
 // REST API routes
 $app->group('/api/v1', function () {

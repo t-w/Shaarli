@@ -27,7 +27,7 @@ class BookmarkMarkdownFormatterTest extends TestCase
      */
     protected function setUp(): void
     {
-        copy('tests/utils/config/configJson.json.php', self::$testConf .'.json.php');
+        copy('tests/utils/config/configJson.json.php', self::$testConf . '.json.php');
         $this->conf = new ConfigManager(self::$testConf);
         $this->formatter = new BookmarkMarkdownFormatter($this->conf, true);
     }
@@ -60,8 +60,8 @@ class BookmarkMarkdownFormatterTest extends TestCase
         );
         $this->assertEquals('This is a &lt;strong&gt;bookmark&lt;/strong&gt;', $link['title']);
         $this->assertEquals(
-            '<div class="markdown"><p>'.
-                '&lt;h2&gt;Content&lt;/h2&gt;&lt;p&gt;`Here is some content&lt;/p&gt;'.
+            '<div class="markdown"><p>' .
+                '&lt;h2&gt;Content&lt;/h2&gt;&lt;p&gt;`Here is some content&lt;/p&gt;' .
             '</p></div>',
             $link['description']
         );
@@ -112,21 +112,64 @@ class BookmarkMarkdownFormatterTest extends TestCase
      */
     public function testFormatDescription()
     {
-        $description = 'This a <strong>description</strong>'. PHP_EOL;
-        $description .= 'text https://sub.domain.tld?query=here&for=real#hash more text'. PHP_EOL;
-        $description .= 'Also, there is an #hashtag added'. PHP_EOL;
-        $description .= '    A  N  D KEEP     SPACES    !   '. PHP_EOL;
+        $description = 'This a <strong>description</strong>' . PHP_EOL;
+        $description .= 'text https://sub.domain.tld?query=here&for=real#hash more text' . PHP_EOL;
+        $description .= 'Also, there is an #hashtag added' . PHP_EOL;
+        $description .= '    A  N  D KEEP     SPACES    !   ' . PHP_EOL;
 
         $bookmark = new Bookmark();
         $bookmark->setDescription($description);
         $link = $this->formatter->format($bookmark);
 
         $description = '<div class="markdown"><p>';
-        $description .= 'This a &lt;strong&gt;description&lt;/strong&gt;<br />'. PHP_EOL;
+        $description .= 'This a &lt;strong&gt;description&lt;/strong&gt;<br />' . PHP_EOL;
         $url = 'https://sub.domain.tld?query=here&amp;for=real#hash';
-        $description .= 'text <a href="'. $url .'">'. $url .'</a> more text<br />'. PHP_EOL;
-        $description .= 'Also, there is an <a href="./add-tag/hashtag">#hashtag</a> added<br />'. PHP_EOL;
+        $description .= 'text <a href="' . $url . '">' . $url . '</a> more text<br />' . PHP_EOL;
+        $description .= 'Also, there is an <a href="./add-tag/hashtag">#hashtag</a> added<br />' . PHP_EOL;
         $description .= 'A  N  D KEEP     SPACES    !   ';
+        $description .= '</p></div>';
+
+        $this->assertEquals($description, $link['description']);
+    }
+
+    /**
+     * Make sure that the description is properly formatted by the default formatter.
+     */
+    public function testFormatDescriptionWithSearchHighlight()
+    {
+        $description = 'This a <strong>description</strong>' . PHP_EOL;
+        $description .= 'text https://sub.domain.tld?query=here&for=real#hash more text' . PHP_EOL;
+        $description .= 'Also, there is an #hashtag added' . PHP_EOL;
+        $description .= '    A  N  D KEEP     SPACES    !   ' . PHP_EOL;
+        $description .= 'And [yet another link](https://other.domain.tld)' . PHP_EOL;
+
+        $bookmark = new Bookmark();
+        $bookmark->setDescription($description);
+        $bookmark->setAdditionalContentEntry(
+            'search_highlight',
+            ['description' => [
+                ['start' => 18, 'end' => 26], // cription
+                ['start' => 49, 'end' => 52], // sub
+                ['start' => 84, 'end' => 88], // hash
+                ['start' => 118, 'end' => 123], // hasht
+                ['start' => 203, 'end' => 215], // other.domain
+            ]]
+        );
+
+        $link = $this->formatter->format($bookmark);
+
+        $description = '<div class="markdown"><p>';
+        $description .= 'This a &lt;strong&gt;des<span class="search-highlight">cription</span>&lt;/strong&gt;<br />' .
+            PHP_EOL;
+        $url = 'https://sub.domain.tld?query=here&amp;for=real#hash';
+        $highlighted = 'https://<span class="search-highlight">sub</span>.domain.tld';
+        $highlighted .= '?query=here&amp;for=real#<span class="search-highlight">hash</span>';
+        $description .= 'text <a href="' . $url . '">' . $highlighted . '</a> more text<br />' . PHP_EOL;
+        $description .= 'Also, there is an <a href="./add-tag/hashtag">#<span class="search-highlight">hasht</span>' .
+            'ag</a> added<br />' . PHP_EOL;
+        $description .= 'A  N  D KEEP     SPACES    !<br />' . PHP_EOL;
+        $description .= 'And <a href="https://other.domain.tld">' .
+            '<span class="search-highlight">yet another link</span></a>';
         $description .= '</p></div>';
 
         $this->assertEquals($description, $link['description']);
@@ -146,7 +189,7 @@ class BookmarkMarkdownFormatterTest extends TestCase
         $this->formatter->addContextData('index_url', $root = 'https://domain.tld/hithere/');
 
         $description = '<div class="markdown"><p>';
-        $description .= 'Text <a href="'. $root .'./add-tag/hashtag">#hashtag</a> more text';
+        $description .= 'Text <a href="' . $root . './add-tag/hashtag">#hashtag</a> more text';
         $description .= '</p></div>';
 
         $link = $this->formatter->format($bookmark);

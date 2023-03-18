@@ -2,8 +2,6 @@
 
 namespace Shaarli\Http;
 
-require_once 'application/http/HttpUtils.php';
-
 /**
  * Class IsHttpsTest
  *
@@ -11,7 +9,6 @@ require_once 'application/http/HttpUtils.php';
  */
 class IsHttpsTest extends \Shaarli\TestCase
 {
-
     /**
      * Test is_https with HTTPS values.
      */

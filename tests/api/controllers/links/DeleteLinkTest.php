@@ -1,12 +1,14 @@
 <?php
 
-
 namespace Shaarli\Api\Controllers;
 
 use malkusch\lock\mutex\NoMutex;
 use Shaarli\Bookmark\BookmarkFileService;
 use Shaarli\Config\ConfigManager;
 use Shaarli\History;
+use Shaarli\Plugin\PluginManager;
+use Shaarli\Tests\Utils\ReferenceHistory;
+use Shaarli\Tests\Utils\ReferenceLinkDB;
 use Slim\Container;
 use Slim\Http\Environment;
 use Slim\Http\Request;
@@ -30,7 +32,7 @@ class DeleteLinkTest extends \Shaarli\TestCase
     protected $conf;
 
     /**
-     * @var \ReferenceLinkDB instance.
+     * @var ReferenceLinkDB instance.
      */
     protected $refDB = null;
 
@@ -57,6 +59,9 @@ class DeleteLinkTest extends \Shaarli\TestCase
     /** @var NoMutex */
     protected $mutex;
 
+    /** @var PluginManager */
+    protected $pluginManager;
+
     /**
      * Before each test, instantiate a new Api with its config, plugins and bookmarks.
      */
@@ -65,12 +70,19 @@ class DeleteLinkTest extends \Shaarli\TestCase
         $this->mutex = new NoMutex();
         $this->conf = new ConfigManager('tests/utils/config/configJson');
         $this->conf->set('resource.datastore', self::$testDatastore);
-        $this->refDB = new \ReferenceLinkDB();
+        $this->refDB = new ReferenceLinkDB();
         $this->refDB->write(self::$testDatastore);
-        $refHistory = new \ReferenceHistory();
+        $refHistory = new ReferenceHistory();
         $refHistory->write(self::$testHistory);
         $this->history = new History(self::$testHistory);
-        $this->bookmarkService = new BookmarkFileService($this->conf, $this->history, $this->mutex, true);
+        $this->pluginManager = new PluginManager($this->conf);
+        $this->bookmarkService = new BookmarkFileService(
+            $this->conf,
+            $this->pluginManager,
+            $this->history,
+            $this->mutex,
+            true
+        );
 
         $this->container = new Container();
         $this->container['conf'] = $this->conf;
@@ -105,7 +117,13 @@ class DeleteLinkTest extends \Shaarli\TestCase
         $this->assertEquals(204, $response->getStatusCode());
         $this->assertEmpty((string) $response->getBody());
 
-        $this->bookmarkService = new BookmarkFileService($this->conf, $this->history, $this->mutex, true);
+        $this->bookmarkService = new BookmarkFileService(
+            $this->conf,
+            $this->pluginManager,
+            $this->history,
+            $this->mutex,
+            true
+        );
         $this->assertFalse($this->bookmarkService->exists($id));
 
         $historyEntry = $this->history->getHistory()[0];

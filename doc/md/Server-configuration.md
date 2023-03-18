@@ -40,11 +40,12 @@ Supported PHP versions:
 
 Version | Status | Shaarli compatibility
 :---:|:---:|:---:
-8.0 | Supported | Yes
-7.4 | Supported | Yes
-7.3 | Supported | Yes
-7.2 | Supported | Yes
-7.1 | Supported | Yes
+8.1 | Supported | Yes
+8.0 | EOL: 2023-11-26| Yes
+7.4 | EOL: 2022-11-28 | Yes
+7.3 | EOL: 2021-12-06 | Yes (up to Shaarli 0.12.1)
+7.2 | EOL: 2020-11-30 | Yes (up to Shaarli 0.12.1)
+7.1 | EOL: 2019-12-01 | Yes (up to Shaarli 0.12.1)
 7.0 | EOL: 2018-12-03 | Yes (up to Shaarli 0.10.x)
 5.6 | EOL: 2018-12-31 | Yes (up to Shaarli 0.10.x)
 5.5 | EOL: 2016-07-10 | Yes
@@ -59,10 +60,15 @@ Extension | Required? | Usage
 [`php-json`](http://php.net/manual/en/book.json.php) | required | configuration parsing
 [`php-simplexml`](https://www.php.net/manual/en/book.simplexml.php) | required | REST API (Slim framework)
 [`php-mbstring`](http://php.net/manual/en/book.mbstring.php) | CentOS, Fedora, RHEL, Windows, some hosting providers | multibyte (Unicode) string support
+[`php-ctype`](https://www.php.net/manual/en/book.ctype.php) | required (bundled with most PHP installation) | Type checking
+[`php-iconv`](https://www.php.net/manual/en/book.iconv.php) | required (bundled with most PHP installation) | Character encoding used in translations
+[`php-session`](https://www.php.net/manual/en/book.session.php) | required (bundled with most PHP installation) | User session
+[`php-zlib`](https://www.php.net/manual/en/book.zlib.php) | required (bundled with most PHP installation) | Datastore I/O compression
 [`php-gd`](http://php.net/manual/en/book.image.php) | optional | required to use thumbnails
 [`php-intl`](http://php.net/manual/en/book.intl.php) | optional | localized text sorting (e.g. `e->è->f`)
 [`php-curl`](http://php.net/manual/en/book.curl.php) | optional | using cURL for fetching webpages and thumbnails in a more robust way
 [`php-gettext`](http://php.net/manual/en/book.gettext.php) | optional | Use the translation system in gettext mode (faster)
+[`php-ldap`](https://www.php.net/manual/en/book.ldap.php) | optional | LDAP login support
 
 Some [plugins](Plugins.md) may require additional configuration.
 
@@ -193,11 +199,20 @@ sudo nano /etc/apache2/sites-available/shaarli.mydomain.org.conf
         Require all granted
     </Directory>
 
+    <Directory /var/www/shaarli.mydomain.org/doc/html/>
+        DirectoryIndex index.html
+        <FilesMatch ".*\.html">
+            Require all granted
+        </FilesMatch>
+    </Directory>
+    
     # BE CAREFUL: directives order matter!
 
     <FilesMatch ".*\.(?!(ico|css|js|gif|jpe?g|png|ttf|oet|woff2?)$)[^\.]*$">
         Require all denied
     </FilesMatch>
+
+    DirectoryIndex index.php
 
     <Files "index.php">
         Require all granted
@@ -207,7 +222,6 @@ sudo nano /etc/apache2/sites-available/shaarli.mydomain.org.conf
         # allow client-side caching of static files
         Header set Cache-Control "max-age=2628000, public, must-revalidate, proxy-revalidate"
     </FilesMatch>
-
 
     # serve the Shaarli favicon from its custom location
     Alias favicon.ico /var/www/shaarli.mydomain.org/images/favicon.ico
@@ -298,6 +312,7 @@ server {
     client_max_body_size 100m;
 
     # relative path to shaarli from the root of the webserver
+    # if shaarli is installed in a subdirectory of the main domain, edit the location accordingly
     location / {
         # default index file when no file URI is requested
         index index.php;

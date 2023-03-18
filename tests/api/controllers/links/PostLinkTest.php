@@ -7,7 +7,10 @@ use Shaarli\Bookmark\Bookmark;
 use Shaarli\Bookmark\BookmarkFileService;
 use Shaarli\Config\ConfigManager;
 use Shaarli\History;
+use Shaarli\Plugin\PluginManager;
 use Shaarli\TestCase;
+use Shaarli\Tests\Utils\ReferenceHistory;
+use Shaarli\Tests\Utils\ReferenceLinkDB;
 use Slim\Container;
 use Slim\Http\Environment;
 use Slim\Http\Request;
@@ -39,7 +42,7 @@ class PostLinkTest extends TestCase
     protected $conf;
 
     /**
-     * @var \ReferenceLinkDB instance.
+     * @var ReferenceLinkDB instance.
      */
     protected $refDB = null;
 
@@ -66,7 +69,7 @@ class PostLinkTest extends TestCase
     /**
      * Number of JSON field per link.
      */
-    const NB_FIELDS_LINK = 9;
+    protected const NB_FIELDS_LINK = 9;
 
     /**
      * Before every test, instantiate a new Api with its config, plugins and bookmarks.
@@ -76,13 +79,19 @@ class PostLinkTest extends TestCase
         $mutex = new NoMutex();
         $this->conf = new ConfigManager('tests/utils/config/configJson');
         $this->conf->set('resource.datastore', self::$testDatastore);
-        $this->refDB = new \ReferenceLinkDB();
+        $this->refDB = new ReferenceLinkDB();
         $this->refDB->write(self::$testDatastore);
-        $refHistory = new \ReferenceHistory();
+        $refHistory = new ReferenceHistory();
         $refHistory->write(self::$testHistory);
         $this->history = new History(self::$testHistory);
-        $this->bookmarkService = new BookmarkFileService($this->conf, $this->history, $mutex, true);
-
+        $pluginManager = new PluginManager($this->conf);
+        $this->bookmarkService = new BookmarkFileService(
+            $this->conf,
+            $pluginManager,
+            $this->history,
+            $mutex,
+            true
+        );
         $this->container = new Container();
         $this->container['conf'] = $this->conf;
         $this->container['db'] = $this->bookmarkService;
@@ -228,5 +237,53 @@ class PostLinkTest extends TestCase
             \DateTime::createFromFormat(Bookmark::LINK_DATE_FORMAT, '20130615_184230'),
             \DateTime::createFromFormat(\DateTime::ATOM, $data['updated'])
         );
+    }
+
+    /**
+     * Test link creation with a tag string provided
+     */
+    public function testPostLinkWithTagString(): void
+    {
+        $link = [
+            'tags' => 'one two',
+        ];
+        $env = Environment::mock([
+            'REQUEST_METHOD' => 'POST',
+            'CONTENT_TYPE' => 'application/json'
+        ]);
+
+        $request = Request::createFromEnvironment($env);
+        $request = $request->withParsedBody($link);
+        $response = $this->controller->postLink($request, new Response());
+
+        $this->assertEquals(201, $response->getStatusCode());
+        $this->assertEquals('/api/v1/bookmarks/1', $response->getHeader('Location')[0]);
+        $data = json_decode((string) $response->getBody(), true);
+        $this->assertEquals(self::NB_FIELDS_LINK, count($data));
+        $this->assertEquals(['one', 'two'], $data['tags']);
+    }
+
+    /**
+     * Test link creation with a tag string provided
+     */
+    public function testPostLinkWithTagString2(): void
+    {
+        $link = [
+            'tags' => ['one two'],
+        ];
+        $env = Environment::mock([
+            'REQUEST_METHOD' => 'POST',
+            'CONTENT_TYPE' => 'application/json'
+        ]);
+
+        $request = Request::createFromEnvironment($env);
+        $request = $request->withParsedBody($link);
+        $response = $this->controller->postLink($request, new Response());
+
+        $this->assertEquals(201, $response->getStatusCode());
+        $this->assertEquals('/api/v1/bookmarks/1', $response->getHeader('Location')[0]);
+        $data = json_decode((string) $response->getBody(), true);
+        $this->assertEquals(self::NB_FIELDS_LINK, count($data));
+        $this->assertEquals(['one', 'two'], $data['tags']);
     }
 }

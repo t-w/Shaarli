@@ -22,7 +22,7 @@ class ThumbnailsController extends ShaarliAdminController
     public function index(Request $request, Response $response): Response
     {
         $ids = [];
-        foreach ($this->container->bookmarkService->search() as $bookmark) {
+        foreach ($this->container->bookmarkService->search()->getBookmarks() as $bookmark) {
             // A note or not HTTP(S)
             if ($bookmark->isNote() || !startsWith(strtolower($bookmark->getUrl()), 'http')) {
                 continue;
@@ -45,7 +45,7 @@ class ThumbnailsController extends ShaarliAdminController
      */
     public function ajaxUpdate(Request $request, Response $response, array $args): Response
     {
-        $id = $args['id'] ?? null;
+        $id = $args['id'] ?? '';
 
         if (false === ctype_digit($id)) {
             return $response->withStatus(400);

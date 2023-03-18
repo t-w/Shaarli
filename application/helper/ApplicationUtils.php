@@ -3,6 +3,8 @@
 namespace Shaarli\Helper;
 
 use Exception;
+use malkusch\lock\exception\LockAcquireException;
+use malkusch\lock\mutex\FlockMutex;
 use Shaarli\Config\ConfigManager;
 
 /**
@@ -35,7 +37,7 @@ class ApplicationUtils
     {
         list($headers, $data) = get_http_response($url, $timeout);
 
-        if (strpos($headers[0], '200 OK') === false) {
+        if (preg_match('#HTTP/[\d\.]+ 200(?: OK)?#', $headers[0]) !== 1) {
             error_log('Failed to retrieve ' . $url);
             return false;
         }
@@ -236,7 +238,7 @@ class ApplicationUtils
                  $conf->get('resource.update_check'),
              ] as $path
         ) {
-            if (!is_file(realpath($path))) {
+            if (!is_string($path) || !is_file(realpath($path))) {
                 # the file may not exist yet
                 continue;
             }
@@ -250,6 +252,20 @@ class ApplicationUtils
         }
 
         return $errors;
+    }
+
+    public static function checkDatastoreMutex(): array
+    {
+        $mutex = new FlockMutex(fopen(SHAARLI_MUTEX_FILE, 'r'), 2);
+        try {
+            $mutex->synchronized(function () {
+                return true;
+            });
+        } catch (LockAcquireException $e) {
+            $errors[] = t('Lock can not be acquired on the datastore. You might encounter concurrent access issues.');
+        }
+
+        return $errors ?? [];
     }
 
     /**

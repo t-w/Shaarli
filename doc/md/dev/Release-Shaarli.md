@@ -46,7 +46,7 @@ GitHub allows drafting the release notes for the upcoming release, from the [Rel
 ## Update the list of Git contributors
 
 ```bash
-$ make authors
+$ make generate_authors
 $ git commit -s -m "Update AUTHORS"
 ```
 
@@ -64,6 +64,14 @@ git pull upstream master
 
 # If releasing a new minor version, create a release branch
 $ git checkout -b v0.x
+# Otherwise just use the existing one
+$ git checkout v0.x
+
+# Get the latest changes
+$ git merge master
+
+# Check that everything went fine:
+$ make test
 
 # Bump shaarli_version.php from dev to 0.x.0, **without the v**
 $ vim shaarli_version.php
