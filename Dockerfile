@@ -55,8 +55,8 @@ COPY .docker/php-fpm.conf /etc/php8/php-fpm.conf
 COPY .docker/services.d /etc/services.d
 
 RUN rm -rf /etc/php8/php-fpm.d/www.conf \
-    && sed -i 's/post_max_size.*/post_max_size = 10M/' /etc/php8/php.ini \
-    && sed -i 's/upload_max_filesize.*/upload_max_filesize = 10M/' /etc/php8/php.ini
+    && sed -i 's/post_max_size.*/post_max_size = 15M/' /etc/php8/php.ini \
+    && sed -i 's/upload_max_filesize.*/upload_max_filesize = 15M/' /etc/php8/php.ini
 
 
 WORKDIR /var/www
