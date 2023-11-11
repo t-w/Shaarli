@@ -149,8 +149,7 @@ class NetscapeBookmarkUtils
             if ($existingLink !== false) {
                 if ($overwrite === false) {
                     // Do not overwrite an existing link
-                    $link->setTags( array_unique (
-                        array_merge( $link->getTags(), $bkm['tags'] ) ) );
+                    $link->setTags(array_unique(array_merge($link->getTags(), $bkm['tags'])));
                     $skipCount++;
                     continue;
                 }
