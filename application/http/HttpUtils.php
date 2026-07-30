@@ -76,7 +76,9 @@ function get_http_response(
 
     // General cURL settings
     curl_setopt($ch, CURLOPT_AUTOREFERER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    // Disable automatic redirect following — we validate each hop manually
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+    curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
     // Default header download if the $curlHeaderFunction is not defined
     curl_setopt($ch, CURLOPT_HEADER, !is_callable($curlHeaderFunction));
     curl_setopt(
@@ -84,7 +86,6 @@ function get_http_response(
         CURLOPT_HTTPHEADER,
         ['Accept-Language: ' . $acceptLanguage]
     );
-    curl_setopt($ch, CURLOPT_MAXREDIRS, $maxRedirs);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
     curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
@@ -113,6 +114,69 @@ function get_http_response(
     $errorNo = curl_errno($ch);
     $errorStr = curl_error($ch);
     $headSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+
+    // Follow redirects manually, validating each target
+    $redirects = 0;
+    while ($response !== false && $redirects < $maxRedirs) {
+        $redirectUrl = curl_getinfo($ch, CURLINFO_REDIRECT_URL);
+        if ($redirectUrl === null || $redirectUrl === '' || $redirectUrl === false) {
+            break;
+        }
+
+        // Validate redirect target
+        $redirectObj = new Url($redirectUrl);
+        if (
+            !filter_var($redirectUrl, FILTER_VALIDATE_URL)
+            || !$redirectObj->isHttp()
+            || !is_safe_url($redirectUrl)
+        ) {
+            curl_close($ch);
+            return [[0 => 'Redirect to disallowed URL'], false];
+        }
+
+        $redirects++;
+        curl_close($ch);
+        $ch = curl_init($redirectUrl);
+        if ($ch === false) {
+            return [[0 => 'curl_init() error on redirect'], false];
+        }
+
+        // Re-apply all cURL options for the new handle
+        curl_setopt($ch, CURLOPT_AUTOREFERER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+        curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+        curl_setopt($ch, CURLOPT_HEADER, !is_callable($curlHeaderFunction));
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            ['Accept-Language: ' . $acceptLanguage]
+        );
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
+        curl_setopt($ch, CURLOPT_BUFFERSIZE, 1024 * 16);
+        curl_setopt($ch, CURLOPT_NOPROGRESS, false);
+        if (is_callable($curlHeaderFunction)) {
+            curl_setopt($ch, CURLOPT_HEADERFUNCTION, $curlHeaderFunction);
+        }
+        if (is_callable($curlWriteFunction)) {
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, $curlWriteFunction);
+        }
+        curl_setopt(
+            $ch,
+            CURLOPT_PROGRESSFUNCTION,
+            function ($arg0, $arg1, $arg2, $arg3, $arg4) use ($maxBytes) {
+                $downloaded = $arg2;
+                return ($downloaded > $maxBytes) ? 1 : 0;
+            }
+        );
+
+        $response = curl_exec($ch);
+        $errorNo = curl_errno($ch);
+        $errorStr = curl_error($ch);
+        $headSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    }
+
     curl_close($ch);
 
     if ($response === false) {
